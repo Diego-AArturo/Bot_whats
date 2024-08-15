@@ -1,13 +1,25 @@
 import requests
-import sett
 import json
 import time
 import google.generativeai as genai
 import os
-api = sett.api_gemini
+from dotenv import load_dotenv
+
+load_dotenv()
+
+api = os.getenv('api_gemini')
 genai.configure(api_key=api)
 
-model = genai.GenerativeModel('gemini-1.5-flash')
+
+instruction = ("Eres un asesor de servicio al cliente de una empresa de comida rapida llamada 'Billo's', al iniciar conversacion con el cliente pide su nombre" 
+              "el menu del restaurante es hamburguesas y perros calientes, donde los perros cuestan 3.000 pesos y las hamburguesas 5.000 pesos"
+              "como asesor de servicio al cliente debes preguntarle al cliente, el medio de pago (efectivo, tarjeta o transferencia) con el que pagara su pedido"
+              "ademas debes de rectificarle la orden al usuario y por ultimo pedir la direccion de envio y un número de contacto"
+                    )
+
+model = genai.GenerativeModel(
+    "models/gemini-1.5-flash", system_instruction=instruction
+)
 
 def obtener_Mensaje_whatsapp(message):
     if 'type' not in message :
@@ -31,8 +43,8 @@ def obtener_Mensaje_whatsapp(message):
 
 def enviar_Mensaje_whatsapp(data):
     try:
-        whatsapp_token = sett.whatsapp_token
-        whatsapp_url = sett.whatsapp_url
+        whatsapp_token = os.getenv('whatsapp_token')
+        whatsapp_url = os.getenv('whatsapp_url')
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer ' + whatsapp_token}
         print("se envia ", data)
@@ -253,9 +265,9 @@ def administrar_chatbot(textu,number, messageId, name):
     list.append(markRead)
     time.sleep(2)
 
-    response = model.generate_content(["Contesta como un asesor de servicio al cliente de una empresa de comida rapida llamada 'Billo's', el menu del restaurante es hamburguesas y perros calientes", textu])
     #print(response.text)
-    
+    chat = model.start_chat()
+    response = chat.send_message(textu)
    
     data = text_Message(number,response.text)
     list.append(data)

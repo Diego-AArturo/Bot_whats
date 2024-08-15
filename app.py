@@ -1,6 +1,11 @@
 from flask import Flask, request
-import sett 
 import services
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+token_v = os.getenv('token')
 
 app = Flask(__name__)
 
@@ -16,7 +21,7 @@ def verificar_token():
         
         challenge = request.args.get('hub.challenge')
         print(token, challenge)
-        if token == sett.token and challenge != None:
+        if token == token_v and challenge != None:
             return challenge
         else:
             return 'token incorrecto', 403
