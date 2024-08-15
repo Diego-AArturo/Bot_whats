@@ -49,4 +49,4 @@ def recibir_mensajes():
         return 'no enviado ' + str(e)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0')
