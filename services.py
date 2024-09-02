@@ -4,6 +4,7 @@ import time
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
+import threading
 
 load_dotenv()
 
@@ -22,6 +23,49 @@ model = genai.GenerativeModel(
 #print(response.text)
 chat = model.start_chat()
 
+class WhatsAppChatbot:
+    def __init__(self, chat_model, send_function, message_interval=5.0):
+        self.chat_model = chat_model
+        self.send_function = send_function
+        self.message_buffer = []
+        self.timer = None
+        self.lock = threading.Lock()
+        self.message_interval = message_interval
+
+    def receive_message(self, message, number, message_id, name):
+        with self.lock:
+            self.message_buffer.append((message, number, message_id, name))
+            if self.timer is None:
+                self.start_timer()
+
+    def start_timer(self):
+        self.timer = threading.Timer(self.message_interval, self.process_messages)
+        self.timer.start()
+
+    def process_messages(self):
+        with self.lock:
+            if not self.message_buffer:
+                return
+
+            # Combina todos los mensajes acumulados en uno solo
+            combined_message = " ".join([msg[0] for msg in self.message_buffer])
+            number = self.message_buffer[0][1]  # Usamos el número del primer mensaje
+            message_id = self.message_buffer[0][2]
+            name = self.message_buffer[0][3]
+
+            # Genera la respuesta usando el modelo LLM
+            response = self.chat_model.send_message(combined_message)
+            response_text = response.text
+
+            # Envía la respuesta combinada
+            data = text_Message(number, response_text)
+            self.send_function(data)
+
+            # Limpiar el buffer y resetear el temporizador
+            self.message_buffer = []
+            self.timer = None
+
+# Instancia de la clase
 
 def obtener_Mensaje_whatsapp(message):
     if 'type' not in message :
@@ -149,79 +193,6 @@ def listReply_Message(number, options, body, footer, sedd,messageId):
     )
     return data
 
-# def document_Message(number, url, caption, filename):
-#     data = json.dumps(
-#         {
-#             "messaging_product": "whatsapp",
-#             "recipient_type": "individual",
-#             "to": number,
-#             "type": "document",
-#             "document": {
-#                 "link": url,
-#                 "caption": caption,
-#                 "filename": filename
-#             }
-#         }
-#     )
-#     return data
-
-# def sticker_Message(number, sticker_id):
-#     data = json.dumps(
-#         {
-#             "messaging_product": "whatsapp",
-#             "recipient_type": "individual",
-#             "to": number,
-#             "type": "sticker",
-#             "sticker": {
-#                 "id": sticker_id
-#             }
-#         }
-#     )
-#     return data
-
-# def get_media_id(media_name , media_type):
-#     media_id = ""
-#     if media_type == "sticker":
-#         media_id = sett.stickers.get(media_name, None)
-#     #elif media_type == "image":
-#     #    media_id = sett.images.get(media_name, None)
-#     #elif media_type == "video":
-#     #    media_id = sett.videos.get(media_name, None)
-#     #elif media_type == "audio":
-#     #    media_id = sett.audio.get(media_name, None)
-#     return media_id
-
-# def replyReaction_Message(number, messageId, emoji):
-#     data = json.dumps(
-#         {
-#             "messaging_product": "whatsapp",
-#             "recipient_type": "individual",
-#             "to": number,
-#             "type": "reaction",
-#             "reaction": {
-#                 "message_id": messageId,
-#                 "emoji": emoji
-#             }
-#         }
-#     )
-#     return data
-
-# def replyText_Message(number, messageId, text):
-    data = json.dumps(
-        {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": number,
-            "context": { "message_id": messageId },
-            "type": "text",
-            "text": {
-                "body": text
-            }
-        }
-    )
-    return data
-
-
 def markRead_Message(messageId):
     data = json.dumps(
         {
@@ -258,10 +229,14 @@ def catalogo_Message(number):
     )
     return data
 
+whatsapp_chatbot = WhatsAppChatbot(chat, enviar_Mensaje_whatsapp)
+
 def administrar_chatbot(textu,number, messageId, name):
     textu = textu.lower() #mensaje que envio el usuario
     list = []
-    print("mensaje del usuario: ",textu)
+    
+    # print("mensaje del usuario: ",textu)
+    whatsapp_chatbot.receive_message(textu, number, messageId, name)
 
     markRead = markRead_Message(messageId)
     list.append(markRead)
@@ -271,77 +246,11 @@ def administrar_chatbot(textu,number, messageId, name):
    
     data = text_Message(number,response.text)
     list.append(data)
-    
-
-    # if "hola" in text:
-    #     body = "¡Hola! 👋 Bienvenido a Bigdateros. ¿Cómo podemos ayudarte hoy?"
-    #     footer = "Equipo Bigdateros"
-    #     options = ["✅ servicios", "📅 agendar cita"]
-
-    #     replyButtonData = buttonReply_Message(number, options, body, footer, "sed1",messageId)
-    #     replyReaction = replyReaction_Message(number, messageId, "🫡")
-    #     list.append(replyReaction)
-    #     list.append(replyButtonData)
-    # elif "servicios" in text:
-    #     body = "Tenemos varias áreas de consulta para elegir. ¿Cuál de estos servicios te gustaría explorar?"
-    #     footer = "Equipo Bigdateros"
-    #     options = ["Analítica Avanzada", "Migración Cloud", "Inteligencia de Negocio"]
-
-    #     listReplyData = listReply_Message(number, options, body, footer, "sed2",messageId)
-    #     sticker = sticker_Message(number, get_media_id("perro_traje", "sticker"))
-
-    #     list.append(listReplyData)
-    #     list.append(sticker)
-    # elif "inteligencia de negocio" in text:
-    #     body = "Buenísima elección. ¿Te gustaría que te enviara un documento PDF con una introducción a nuestros métodos de Inteligencia de Negocio?"
-    #     footer = "Equipo Bigdateros"
-    #     options = ["✅ Sí, envía el PDF.", "⛔ No, gracias"]
-
-    #     replyButtonData = buttonReply_Message(number, options, body, footer, "sed3",messageId)
-    #     list.append(replyButtonData)
-    # elif "sí, envía el pdf" in text:
-    #     sticker = sticker_Message(number, get_media_id("pelfet", "sticker"))
-    #     textMessage = text_Message(number,"Genial, por favor espera un momento.")
-
-    #     enviar_Mensaje_whatsapp(sticker)
-    #     enviar_Mensaje_whatsapp(textMessage)
-    #     time.sleep(3)
-
-    #     document = document_Message(number, sett.document_url, "Listo 👍🏻", "Inteligencia de Negocio.pdf")
-    #     enviar_Mensaje_whatsapp(document)
-    #     time.sleep(3)
-
-    #     body = "¿Te gustaría programar una reunión con uno de nuestros especialistas para discutir estos servicios más a fondo?"
-    #     footer = "Equipo Bigdateros"
-    #     options = ["✅ Sí, agenda reunión", "No, gracias." ]
-
-    #     replyButtonData = buttonReply_Message(number, options, body, footer, "sed4",messageId)
-    #     list.append(replyButtonData)
-    # elif "sí, agenda reunión" in text :
-    #     body = "Estupendo. Por favor, selecciona una fecha y hora para la reunión:"
-    #     footer = "Equipo Bigdateros"
-    #     options = ["📅 10: mañana 10:00 AM", "📅 7 de junio, 2:00 PM", "📅 8 de junio, 4:00 PM"]
-
-    #     listReply = listReply_Message(number, options, body, footer, "sed5",messageId)
-    #     list.append(listReply)
-    # elif "7 de junio, 2:00 pm" in text:
-    #     body = "Excelente, has seleccionado la reunión para el 7 de junio a las 2:00 PM. Te enviaré un recordatorio un día antes. ¿Necesitas ayuda con algo más hoy?"
-    #     footer = "Equipo Bigdateros"
-    #     options = ["✅ Sí, por favor", "❌ No, gracias."]
-
-
-    #     buttonReply = buttonReply_Message(number, options, body, footer, "sed6",messageId)
-    #     list.append(buttonReply)
-    # elif "no, gracias." in text:
-    #     textMessage = text_Message(number,"Perfecto! No dudes en contactarnos si tienes más preguntas. Recuerda que también ofrecemos material gratuito para la comunidad. ¡Hasta luego! 😊")
-    #     list.append(textMessage)
-    # else :
-    #     data = text_Message(number,"Lo siento, no entendí lo que dijiste. ¿Quieres que te ayude con alguna de estas opciones?")
-    #     list.append(data)
+   
    
     for item in list:
         enviar_Mensaje_whatsapp(item)
-        print('g')
+        
 
 #al parecer para mexico, whatsapp agrega 521 como prefijo en lugar de 52,
 # este codigo soluciona ese inconveniente.

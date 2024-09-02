@@ -1,0 +1,29 @@
+Proyecto Bot-whats
+
+- Frontend: 
+ 
+	* Prototipos
+	* Desarrollo : Tarjeta-recibo, Botón-eliminar-recibo, deslizable
+ 	* Logos/colores
+
+- Backend: 
+	
+	*Bot (IA) :  RAG
+		retornar chat, recibo
+		websocket
+		contestación de mensajes múltiples individuales --> concat de mensajes en x tiempo
+		
+
+
+
+	*Gestion de datos: 
+		+ Datos temporales: Información de empresa Ordinal = [{ producto: ham, precio: , disponibilidad: si/no , }]. 
+					promociones = [ { producto: [ham, papas, cocacola], precio: $$ },{ producto: [perro, papas], precio: $$ } ].
+		+ Base de datos: 
+	
+
+
+
+		 
+
+
