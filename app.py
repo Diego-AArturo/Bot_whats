@@ -3,6 +3,7 @@ from flask_socketio import SocketIO, emit
 import services
 from dotenv import load_dotenv
 import os
+import eventlet
 
 load_dotenv()
 
@@ -10,7 +11,7 @@ token_v = os.getenv('token')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='eventlet')  # Configura SocketIO para usar eventlet
 
 @app.route('/bienvenido', methods=['GET'])
 def bienvenido():
@@ -63,4 +64,4 @@ def handle_message(data):
     emit('response', {'data': 'Mensaje recibido'})
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0')
+    socketio.run(app, host='0.0.0.0')  # `port` es opcional y puede ser configurado según sea necesario
