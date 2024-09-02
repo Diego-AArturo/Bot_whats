@@ -229,28 +229,39 @@ def catalogo_Message(number):
     )
     return data
 
+# whatsapp_chatbot = WhatsAppChatbot(chat, enviar_Mensaje_whatsapp)
+
+# def administrar_chatbot(textu,number, messageId, name):
+#     textu = textu.lower() #mensaje que envio el usuario
+#     list = []
+    
+#     # print("mensaje del usuario: ",textu)
+#     whatsapp_chatbot.receive_message(textu, number, messageId, name)
+
+#     markRead = markRead_Message(messageId)
+#     list.append(markRead)
+#     time.sleep(2)
+    
+#     response = chat.send_message(textu)
+   
+#     data = text_Message(number,response.text)
+#     list.append(data)
+   
+   
+#     for item in list:
+#         enviar_Mensaje_whatsapp(item)
+
 whatsapp_chatbot = WhatsAppChatbot(chat, enviar_Mensaje_whatsapp)
 
-def administrar_chatbot(textu,number, messageId, name):
-    textu = textu.lower() #mensaje que envio el usuario
-    list = []
-    
-    # print("mensaje del usuario: ",textu)
+def administrar_chatbot(textu, number, messageId, name):
+    textu = textu.lower()  # mensaje que envío el usuario
+
+    print("mensaje del usuario: ", textu)
     whatsapp_chatbot.receive_message(textu, number, messageId, name)
 
+    # Marca el mensaje como leído
     markRead = markRead_Message(messageId)
-    list.append(markRead)
-    time.sleep(2)
-    
-    response = chat.send_message(textu)
-   
-    data = text_Message(number,response.text)
-    list.append(data)
-   
-   
-    for item in list:
-        enviar_Mensaje_whatsapp(item)
-        
+    enviar_Mensaje_whatsapp(markRead)
 
 #al parecer para mexico, whatsapp agrega 521 como prefijo en lugar de 52,
 # este codigo soluciona ese inconveniente.
