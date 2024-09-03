@@ -43,7 +43,10 @@ instruction = ('''Eres un asesor de servicio al cliente de una empresa de comida
               de ser transferencia dile que lo envie a la cuenta de nequi +57 666666666. Al finalizar el pedido debes rectificar que el cliente no quiera nada más
               y darle un resumen de su pedido rectificando asi la orden,luego debes pedir la direccion de envio y un número de contacto. En caso de que el cliente
               pida reclamar su pedido en la tienda dile que hay una cede en las mercedes y otra en la 28.
-              Por ultimo envia un resumen del pedio en formato ".JSON" de la siguiente manera: 
+              Al finalizar el pedio envia un formato ".JSON" de la siguiente manera: 
+
+              Perfecto Diego entonces procederemos a hacer tu pedido muchas gracias
+                
               {
                'Nombre' : Nombre del cliente,
                'productos': "Producto1", "Producto2", "Producto3" ,
@@ -99,10 +102,12 @@ class WhatsAppChatbot:
                 response = self.chat_model.send_message(combined_message)
                 response_text = response.text
                 if '{' in response_text:
-                    response_text_parts = response_text.split('{', 1)
-                    response_text = response_text_parts[0].strip()
-                    recibo_json = "{" + response_text_parts[1].strip()
-                    self.recibos.append(recibo_json)
+                    the_dict = dict(response_text[response_text.index('{'):response_text.index('}')])
+                    # response_text_parts = response_text.split('{', 1)
+                    # response_text = response_text_parts[0].strip()
+                    # recibo_json = "{" + response_text_parts[1].strip()
+                    print('THE DICT: ', the_dict)
+                    self.recibos.append(the_dict)
             except Exception as e:
                 response_text = "Lo siento, no puedo procesar tu solicitud en este momento."
             finally:
@@ -281,28 +286,6 @@ def catalogo_Message(number):
         }
     )
     return data
-
-# whatsapp_chatbot = WhatsAppChatbot(chat, enviar_Mensaje_whatsapp)
-
-# def administrar_chatbot(textu,number, messageId, name):
-#     textu = textu.lower() #mensaje que envio el usuario
-#     list = []
-    
-#     # print("mensaje del usuario: ",textu)
-#     whatsapp_chatbot.receive_message(textu, number, messageId, name)
-
-#     markRead = markRead_Message(messageId)
-#     list.append(markRead)
-#     time.sleep(2)
-    
-#     response = chat.send_message(textu)
-   
-#     data = text_Message(number,response.text)
-#     list.append(data)
-   
-   
-#     for item in list:
-#         enviar_Mensaje_whatsapp(item)
 
 whatsapp_chatbot = WhatsAppChatbot(chat, enviar_Mensaje_whatsapp)
 
