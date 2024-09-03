@@ -71,4 +71,5 @@ def handle_message(data):
     emit('response', {'data': 'Mensaje recibido'})
 
 if __name__ == '__main__':
+    print('Escuchando en el puerto 5000...')
     socketio.run(app, host='0.0.0.0')  # `port` es opcional y puede ser configurado según sea necesario

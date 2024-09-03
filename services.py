@@ -1,3 +1,4 @@
+import logging
 import sys
 import requests
 import json
@@ -6,6 +7,7 @@ import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 import threading
+# import app
 
 load_dotenv()
 
@@ -103,15 +105,15 @@ class WhatsAppChatbot:
                 response = self.chat_model.send_message(combined_message)
                 response_text = response.text
                 if '{' in response_text:
-                    sys.stdout.write('RESPONSE TEXT: ' + response_text)
-                    sys.stdout.write('RESPONSE TEXT INDEX 1: ' + str(response_text.index('{')))
-                    sys.stdout.write('RESPONSE TEXT INDEX 2: ' + str(response_text.index('}')))
-                    the_dict = dict(response_text[response_text.index('{'):response_text.index('}')])
-                    # response_text_parts = response_text.split('{', 1)
-                    # response_text = response_text_parts[0].strip()
-                    # recibo_json = "{" + response_text_parts[1].strip()
-                    sys.stdout.write('THE DICT: ' + str(the_dict))
-                    self.recibos.append(the_dict)
+                    print('RESPONSE TEXT: ' + response_text)
+                    # sys.stdout.write('RESPONSE TEXT INDEX 1: ' + str(response_text.index('{')))
+                    # sys.stdout.write('RESPONSE TEXT INDEX 2: ' + str(response_text.index('}')))
+                    # the_dict = dict(response_text[response_text.index('{'):response_text.index('}')])
+                    response_text_parts = response_text.split('{', 1)
+                    response_text = response_text_parts[0].strip()
+                    recibo_json = "{" + response_text_parts[1].strip()
+                    # sys.stdout.write('THE DICT: ' + str(the_dict))
+                    self.recibos.append(recibo_json)
             except Exception as e:
                 response_text = "Lo siento, no puedo procesar tu solicitud en este momento."
             finally:
