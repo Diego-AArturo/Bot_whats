@@ -1,3 +1,4 @@
+import sys
 import requests
 import json
 import time
@@ -45,7 +46,7 @@ instruction = ('''Eres un asesor de servicio al cliente de una empresa de comida
               pida reclamar su pedido en la tienda dile que hay una cede en las mercedes y otra en la 28.
               Al finalizar el pedio envia un formato ".JSON" de la siguiente manera: 
 
-              Perfecto Diego entonces procederemos a hacer tu pedido muchas gracias
+              
                 
               {
                'Nombre' : Nombre del cliente,
@@ -106,7 +107,7 @@ class WhatsAppChatbot:
                     # response_text_parts = response_text.split('{', 1)
                     # response_text = response_text_parts[0].strip()
                     # recibo_json = "{" + response_text_parts[1].strip()
-                    print('THE DICT: ', the_dict)
+                    sys.stdout('THE DICT: ', the_dict)
                     self.recibos.append(the_dict)
             except Exception as e:
                 response_text = "Lo siento, no puedo procesar tu solicitud en este momento."
