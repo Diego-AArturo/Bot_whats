@@ -11,11 +11,50 @@ load_dotenv()
 api = os.getenv('api_gemini')
 genai.configure(api_key=api)
 
-instruction = ("Eres un asesor de servicio al cliente de una empresa de comida rapida llamada 'Billo's', al iniciar conversacion con el cliente pide su nombre" 
-              "el menu del restaurante es hamburguesas y perros calientes, donde los perros cuestan 3.000 pesos y las hamburguesas 5.000 pesos"
-              "como asesor de servicio al cliente debes preguntarle al cliente, el medio de pago (efectivo, tarjeta o transferencia) con el que pagara su pedido"
-              "ademas debes de rectificarle la orden al usuario y por ultimo pedir la direccion de envio y un número de contacto"
-                    )
+menu_Hamburguesas = [
+    { 'Producto': 'Hamburguesa tradicional', 
+    'Precio': '17.000' ,
+    'Descripcion': 'Carne tradicional, tocineta, jamon, queso, piña en cuadros',
+    'Disponibilidad': 'si' },
+    { 'Producto': 'Hamburguesa casera', 
+    'Precio': '15.000' ,
+    'Descripcion':'',
+    'Disponibilidad': 'si' },
+    { 'Producto': 'Hamburguesa clasica angus', 
+    'Precio': '17.000' ,
+    'Descripcion':'',
+    'Disponibilidad': 'si' },
+    
+    ]
+menu_perros = [
+    { 'Producto': 'Especial', 
+    'Precio': '14.000' ,
+    'Descripcion': '',
+    'Disponibilidad': 'si' },
+    { 'Producto': 'super', 
+    'Precio': '15.000' ,
+    'Descripcion': ' ',
+    'Disponibilidad': 'si' },
+]
+instruction = ('''Eres un asesor de servicio al cliente de una empresa de comida rapida llamada "Billo's", al iniciar conversacion con el cliente pide su nombre.
+              Responde de forma cordiar y servicial, como el asesor de la empresa "Billo's".
+              el menu del restaurante esta en ```{menu_Hamburguesas,menu_perros}```, habla del menu solo si el cliente pregunta por el,
+              como asesor de servicio al cliente debes preguntarle al cliente, el medio de pago (efectivo, tarjeta o transferencia) con el que pagara su pedido, 
+              de ser transferencia dile que lo envie a la cuenta de nequi +57 666666666. Al finalizar el pedido debes rectificar que el cliente no quiera nada más
+              y darle un resumen de su pedido rectificando asi la orden,luego debes pedir la direccion de envio y un número de contacto. En caso de que el cliente
+              pida reclamar su pedido en la tienda dile que hay una cede en las mercedes y otra en la 28.
+              Por ultimo envia un resumen del pedio en formato ".JSON" de la siguiente manera: 
+              {
+               'Nombre' : Nombre del cliente,
+               'productos': "Producto1", "Producto2", "Producto3" ,
+               'cantidad' : "2","1","3",
+               'Descripcion: "una de producto1 sin piña"," ", "sin salsas",
+               'Telefono' : Telefono del cliente
+               'Direccion' : Diereccion 
+               'Forma de pago': medio de pago
+              }
+              
+                 '''   )
 
 model = genai.GenerativeModel(
     "models/gemini-1.5-flash", system_instruction=instruction
@@ -31,6 +70,7 @@ class WhatsAppChatbot:
         self.timer = None
         self.lock = threading.Lock()
         self.message_interval = message_interval
+        self.recibos = []
 
     def receive_message(self, message, number, message_id, name):
         with self.lock:
@@ -53,17 +93,30 @@ class WhatsAppChatbot:
             message_id = self.message_buffer[0][2]
             name = self.message_buffer[0][3]
 
-            # Genera la respuesta usando el modelo LLM
-            response = self.chat_model.send_message(combined_message)
-            response_text = response.text
+            recibo_json = None
+            try:
+                # Genera la respuesta usando el modelo LLM
+                response = self.chat_model.send_message(combined_message)
+                response_text = response.text
+                if '{' in response_text:
+                    response_text_parts = response_text.split('{', 1)
+                    response_text = response_text_parts[0].strip()
+                    recibo_json = "{" + response_text_parts[1].strip()
+                    self.recibos.append(recibo_json)
+            except Exception as e:
+                response_text = "Lo siento, no puedo procesar tu solicitud en este momento."
+            finally:
+                # Envía la respuesta combinada
+                data = text_Message(number, response_text)
+                self.send_function(data)
 
-            # Envía la respuesta combinada
-            data = text_Message(number, response_text)
-            self.send_function(data)
+                # Limpiar el buffer y resetear el temporizador
+                self.message_buffer = []
+                self.timer = None
+            
+    def obtener_recibos(self):
+        return self.recibos        
 
-            # Limpiar el buffer y resetear el temporizador
-            self.message_buffer = []
-            self.timer = None
 
 # Instancia de la clase
 

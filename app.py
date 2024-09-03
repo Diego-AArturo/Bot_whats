@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
 import services
 from dotenv import load_dotenv
@@ -16,6 +16,13 @@ socketio = SocketIO(app, async_mode='eventlet')  # Configura SocketIO para usar 
 @app.route('/bienvenido', methods=['GET'])
 def bienvenido():
     return 'Hola mundo bigdateros, desde Flask'
+
+chatbot = services.WhatsAppChatbot(chat_model=services.chat, send_function=services.enviar_Mensaje_whatsapp)
+
+@app.route('/pedidos', methods=['GET'])
+def pedidos():
+    recibos = chatbot.obtener_recibos()  # Obtener los recibos almacenados
+    return jsonify(recibos)
 
 @app.route('/webhook', methods=['GET'])
 def verificar_token():
