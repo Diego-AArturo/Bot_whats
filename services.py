@@ -7,6 +7,8 @@ import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 import threading
+import re
+#process_messages
 # import app
 
 load_dotenv()
@@ -40,25 +42,23 @@ menu_perros = [
     'Disponibilidad': 'si' },
 ]
 instruction = ('''Eres un asesor de servicio al cliente de una empresa de comida rapida llamada "Billo's", al iniciar conversacion con el cliente pide su nombre.
-              Responde de forma cordiar y servicial, como el asesor de la empresa "Billo's".
-              el menu del restaurante esta en ```{menu_Hamburguesas,menu_perros}```, habla del menu solo si el cliente pregunta por el,
-              como asesor de servicio al cliente debes preguntarle al cliente, el medio de pago (efectivo, tarjeta o transferencia) con el que pagara su pedido, 
-              de ser transferencia dile que lo envie a la cuenta de nequi +57 666666666. Al finalizar el pedido debes rectificar que el cliente no quiera nada más
-              y darle un resumen de su pedido rectificando asi la orden,luego debes pedir la direccion de envio y un número de contacto. En caso de que el cliente
-              pida reclamar su pedido en la tienda dile que hay una cede en las mercedes y otra en la 28.
-              Al finalizar el pedio envia un formato ".JSON" de la siguiente manera: 
-
-              
-                
-              {
-               'Nombre' : Nombre del cliente,
-               'productos': "Producto1", "Producto2", "Producto3" ,
-               'cantidad' : "2","1","3",
-               'Descripcion: "una de producto1 sin piña"," ", "sin salsas",
-               'Telefono' : Telefono del cliente
-               'Direccion' : Diereccion 
-               'Forma de pago': medio de pago
-              }
+              Responde de forma cordiar, servicial y puntual, como el asesor de la empresa "Billo's".
+              Toma el menu del restaurante solo de esta informacion ```{menu_Hamburguesas,menu_perros}```, si el cliente pregunta por algo que no este en el meno, 
+               dile que no hay, habla del menu solo si el cliente pregunta por el.
+              Como asesor de servicio al cliente debes preguntarle al cliente el medio de pago (efectivo, tarjeta o transferencia) con el que pagara su pedido, 
+              de ser transferencia dile que lo envie a la cuenta de nequi +57 666666666. Al finalizar el pedido debes rectificar que el cliente no quiera nada más,
+               luego debes pedir la direccion de envio y un número de contacto. En caso de que el cliente pida reclamar su pedido en la tienda dile que hay una cede en las mercedes y otra en la 28.
+              Al finalizar el pedido pidele confirmacion al cliente, hazle un resumen de su pedido y preguntale si esta correcto.
+               
+               Solo Despues de que el cliente confirme el pedido eviale el siguiente mensaje:               
+               Gracias por pedir a billo's                
+              {"Nombre" : "Nombre del cliente",
+               "productos": ["Producto1", "Producto2", "Producto3"],
+               "cantidad" : ["2","1","3"],
+               "Descripcion": ["una de producto1 sin piña"," ", "sin salsas"],
+               "Telefono" : "Telefono del cliente",
+               "Direccion" : "Direccion",
+               "Forma de pago": "medio de pago"}
               
                  '''   )
 
@@ -67,7 +67,7 @@ model = genai.GenerativeModel(
 )
 #print(response.text)
 chat = model.start_chat()
-
+recibos = []
 class WhatsAppChatbot:
     def __init__(self, chat_model, send_function, message_interval=5.0):
         self.chat_model = chat_model
@@ -76,7 +76,7 @@ class WhatsAppChatbot:
         self.timer = None
         self.lock = threading.Lock()
         self.message_interval = message_interval
-        self.recibos = []
+        
 
     def receive_message(self, message, number, message_id, name):
         with self.lock:
@@ -87,46 +87,61 @@ class WhatsAppChatbot:
     def start_timer(self):
         self.timer = threading.Timer(self.message_interval, self.process_messages)
         self.timer.start()
+    
 
     def process_messages(self):
         with self.lock:
             if not self.message_buffer:
                 return
 
-            # Combina todos los mensajes acumulados en uno solo
             combined_message = " ".join([msg[0] for msg in self.message_buffer])
-            number = self.message_buffer[0][1]  # Usamos el número del primer mensaje
+            number = self.message_buffer[0][1]
             message_id = self.message_buffer[0][2]
             name = self.message_buffer[0][3]
 
             recibo_json = None
             try:
-                # Genera la respuesta usando el modelo LLM
                 response = self.chat_model.send_message(combined_message)
                 response_text = response.text
-                if '{' in response_text:
-                    print('RESPONSE TEXT: ' + response_text)
-                    # sys.stdout.write('RESPONSE TEXT INDEX 1: ' + str(response_text.index('{')))
-                    # sys.stdout.write('RESPONSE TEXT INDEX 2: ' + str(response_text.index('}')))
-                    # the_dict = dict(response_text[response_text.index('{'):response_text.index('}')])
-                    response_text_parts = response_text.split('{', 1)
-                    response_text = response_text_parts[0].strip()
-                    recibo_json = "{" + response_text_parts[1].strip()
-                    # sys.stdout.write('THE DICT: ' + str(the_dict))
-                    self.recibos.append(recibo_json)
+                print('Response text:', response_text)
+
+                json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
+                if json_match:
+                    json_string = json_match.group(0)
+                    json_string = json_string.replace(",]", "]").replace(",}", "}")
+
+                    try:
+                        recibo_json = json.loads(json_string)
+                        print('JSON generado:', recibo_json)
+                    except json.JSONDecodeError as e:
+                        logging.error(f"Error al decodificar JSON: {e}")
+                        recibo_json = None
+
+                    if recibo_json:
+                        recibos.append(recibo_json)
+                        print('Recibo almacenado en recibos:', recibos)
+                        
+                    response_text = response_text.replace(json_string, "").strip()
+                else:
+                    print('No se encontró un JSON válido en la respuesta:', response_text)
             except Exception as e:
+                logging.error(f"Error al procesar el mensaje: {e}")
                 response_text = "Lo siento, no puedo procesar tu solicitud en este momento."
             finally:
-                # Envía la respuesta combinada
                 data = text_Message(number, response_text)
                 self.send_function(data)
 
-                # Limpiar el buffer y resetear el temporizador
-                self.message_buffer = []
-                self.timer = None
+            self.message_buffer = []
+            self.timer = None
+            print("Finalizado el proceso de mensajes. Recibos actuales:", recibos)
             
     def obtener_recibos(self):
-        return self.recibos        
+        with self.lock:
+            
+            print('obt_recibos: ', recibos)
+            return recibos
+        
+       
 
 
 # Instancia de la clase
@@ -183,40 +198,6 @@ def text_Message(number,text):
     )
     return data
 
-# def buttonReply_Message(number, options, body, footer, sedd,messageId):
-#     buttons = []
-#     for i, option in enumerate(options):
-#         buttons.append(
-#             {
-#                 "type": "reply",
-#                 "reply": {
-#                     "id": sedd + "_btn_" + str(i+1),
-#                     "title": option
-#                 }
-#             }
-#         )
-
-#     data = json.dumps(
-#         {
-#             "messaging_product": "whatsapp",
-#             "recipient_type": "individual",
-#             "to": number,
-#             "type": "interactive",
-#             "interactive": {
-#                 "type": "button",
-#                 "body": {
-#                     "text": body
-#                 },
-#                 "footer": {
-#                     "text": footer
-#                 },
-#                 "action": {
-#                     "buttons": buttons
-#                 }
-#             }
-#         }
-#     )
-#     return data
 
 def listReply_Message(number, options, body, footer, sedd,messageId):
     rows = []

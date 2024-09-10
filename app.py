@@ -4,6 +4,7 @@ import services
 from dotenv import load_dotenv
 import os
 import eventlet
+import time
 
 load_dotenv()
 
@@ -15,14 +16,18 @@ socketio = SocketIO(app, async_mode='eventlet')  # Configura SocketIO para usar 
 
 @app.route('/bienvenido', methods=['GET'])
 def bienvenido():
-    return 'Hola mundo bigdateros, desde Flask'
+    return 'Billo\'s, comidas rapidas'
 
 chatbot = services.WhatsAppChatbot(chat_model=services.chat, send_function=services.enviar_Mensaje_whatsapp)
 
+
+
 @app.route('/pedidos', methods=['GET'])
 def pedidos():
+    time.sleep(1)  # Espera un segundo para asegurar que el proceso de mensajes ha terminado
     recibos = chatbot.obtener_recibos()  # Obtener los recibos almacenados
-    return jsonify(recibos)
+    return jsonify(recibos)  # Devolver los recibos como JSON
+
 
 @app.route('/webhook', methods=['GET'])
 def verificar_token():
@@ -72,4 +77,4 @@ def handle_message(data):
 
 if __name__ == '__main__':
     print('Escuchando en el puerto 5000...')
-    socketio.run(app, host='0.0.0.0')  # `port` es opcional y puede ser configurado según sea necesario
+    socketio.run(app, host='0.0.0.0',debug=True)  # `port` es opcional y puede ser configurado según sea necesario
