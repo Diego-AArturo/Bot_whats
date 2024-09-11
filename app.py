@@ -62,10 +62,16 @@ def recibir_mensajes():
         if number not in users_sessions:
             users_sessions[number] = services.create_new_session(number)
 
-        services.administrar_chatbot(text, number, messageId, name, session=users_sessions[number])
+        # Procesa el mensaje usando el chatbot
+        chatbot_response = services.administrar_chatbot(text, number, messageId, name, session=users_sessions[number])
+        
+        # Emitir el mensaje a través de SocketIO
+        socketio.emit('response', {'data': chatbot_response}, room=number)
+
         return 'enviado'
     except Exception as e:
         return 'no enviado ' + str(e)
+
 
 
 # @app.route('/webhook', methods=['POST'])
@@ -96,21 +102,32 @@ def handle_connect():
 def handle_disconnect():
     print('Cliente desconectado')
 
-@socketio.on('message', namespace='/<user_id>')
-def handle_message(data):
-    print(f'Mensaje recibido del usuario {data["user_id"]}: {data["message"]}')
-    emit('response', {'data': 'Mensaje recibido'}, namespace=f'/{data["user_id"]}')
+# @socketio.on('message', namespace='/<user_id>')
+# def handle_message(data):
+#     print(f'Mensaje recibido del usuario {data["user_id"]}: {data["message"]}')
+#     emit('response', {'data': 'Mensaje recibido'}, namespace=f'/{data["user_id"]}')
 
+# @socketio.on('message', namespace='/chat')
+# def handle_message(data):
+#     user_id = data.get('user_id')
+#     message = data.get('message')
+    
+#     # Procesa el mensaje
+#     chatbot_response = services.administrar_chatbot(message, user_id)
+
+#     # Envía la respuesta solo al usuario correspondiente
+#     emit('response', {'data': chatbot_response}, room=user_id)
 @socketio.on('message', namespace='/chat')
 def handle_message(data):
     user_id = data.get('user_id')
     message = data.get('message')
     
-    # Procesa el mensaje
+    # Procesa el mensaje usando el chatbot
     chatbot_response = services.administrar_chatbot(message, user_id)
 
     # Envía la respuesta solo al usuario correspondiente
     emit('response', {'data': chatbot_response}, room=user_id)
+
 
 if __name__ == '__main__':
     print('Escuchando en el puerto 5000...')
