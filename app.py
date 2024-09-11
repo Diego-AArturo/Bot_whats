@@ -114,4 +114,4 @@ def handle_message(data):
 
 if __name__ == '__main__':
     print('Escuchando en el puerto 5000...')
-    socketio.run(app, host='0.0.0.0',debug=True)  # `port` es opcional y puede ser configurado según sea necesario
+    socketio.run(app, host='0.0.0.0')  # `port` es opcional y puede ser configurado según sea necesario
