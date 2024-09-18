@@ -65,29 +65,39 @@ instruction = ('''Eres un asesor de servicio al cliente de una empresa de comida
 model = genai.GenerativeModel(
     "models/gemini-1.5-flash", system_instruction=instruction
 )
+def start_new_chat_session():
+    return model.start_chat()
+
+def create_new_session(number):
+    session = {
+        'number': number,
+        'messages': [],  # Puedes almacenar los mensajes si es necesario
+        'state': 'new',  # Estado inicial
+        'timestamp': time.time()  # Marca de tiempo de la sesión
+    }
+    print(f"Sesión creada para el número {number}: {session}")
+    return session
+
 #print(response.text)
-chat = model.start_chat()
+
 recibos = []
 class WhatsAppChatbot:
-    def __init__(self, chat_model, send_function, message_interval=5.0):
-        self.chat_model = chat_model
+    def __init__(self, send_function, message_interval=5.0):
         self.send_function = send_function
         self.message_buffer = []
         self.timer = None
         self.lock = threading.Lock()
         self.message_interval = message_interval
-        
 
-    def receive_message(self, message, number, message_id, name):
+    def receive_message(self, message, number, message_id, name, chat_session):
         with self.lock:
-            self.message_buffer.append((message, number, message_id, name))
+            self.message_buffer.append((message, number, message_id, name, chat_session))
             if self.timer is None:
                 self.start_timer()
 
     def start_timer(self):
         self.timer = threading.Timer(self.message_interval, self.process_messages)
         self.timer.start()
-    
 
     def process_messages(self):
         with self.lock:
@@ -98,10 +108,11 @@ class WhatsAppChatbot:
             number = self.message_buffer[0][1]
             message_id = self.message_buffer[0][2]
             name = self.message_buffer[0][3]
+            chat_session = self.message_buffer[0][4]
 
             recibo_json = None
             try:
-                response = self.chat_model.send_message(combined_message)
+                response = chat_session.send_message(combined_message)
                 response_text = response.text
                 print('Response text:', response_text)
 
@@ -134,14 +145,11 @@ class WhatsAppChatbot:
             self.message_buffer = []
             self.timer = None
             print("Finalizado el proceso de mensajes. Recibos actuales:", recibos)
-            
+
     def obtener_recibos(self):
         with self.lock:
-            
             print('obt_recibos: ', recibos)
             return recibos
-        
-       
 
 
 # Instancia de la clase
@@ -171,11 +179,11 @@ def enviar_Mensaje_whatsapp(data):
         whatsapp_token = os.getenv('whatsapp_token')
         whatsapp_url = os.getenv('whatsapp_url')
         headers = {'Content-Type': 'application/json',
-                   'Authorization': 'Bearer ' + whatsapp_token}
+                    'Authorization': 'Bearer ' + whatsapp_token}
         print("se envia ", data)
         response = requests.post(whatsapp_url, 
-                                 headers=headers, 
-                                 data=data)
+                                headers=headers, 
+                                data=data)
         
         if response.status_code == 200:
             return 'mensaje enviado', 200
@@ -274,13 +282,10 @@ def catalogo_Message(number):
     )
     return data
 
-whatsapp_chatbot = WhatsAppChatbot(chat, enviar_Mensaje_whatsapp)
-
-def administrar_chatbot(textu, number, messageId, name):
-    textu = textu.lower()  # mensaje que envío el usuario
-
-    print("mensaje del usuario: ", textu)
-    whatsapp_chatbot.receive_message(textu, number, messageId, name)
+def administrar_chatbot(textu, number, messageId, name, session, chat_session):
+    textu = textu.lower()
+    print(f"Mensaje del usuario {number}: {textu}")
+    WhatsAppChatbot.receive_message(textu, number, messageId, name, chat_session)
 
     # Marca el mensaje como leído
     markRead = markRead_Message(messageId)
