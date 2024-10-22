@@ -68,15 +68,15 @@ model = genai.GenerativeModel(
 def start_new_chat_session():
     return model.start_chat()
 
-def create_new_session(number):
-    session = {
-        'number': number,
-        'messages': [],  # Puedes almacenar los mensajes si es necesario
-        'state': 'new',  # Estado inicial
-        'timestamp': time.time()  # Marca de tiempo de la sesión
-    }
-    print(f"Sesión creada para el número {number}: {session}")
-    return session
+# def create_new_session(number):
+#     session = {
+#         'number': number,
+#         'messages': [],  # Puedes almacenar los mensajes si es necesario
+#         'state': 'new',  # Estado inicial
+#         'timestamp': time.time()  # Marca de tiempo de la sesión
+#     }
+#     print(f"Sesión creada para el número {number}: {session}")
+#     return session
 
 #print(response.text)
 
@@ -114,7 +114,7 @@ class WhatsAppChatbot:
             try:
                 response = chat_session.send_message(combined_message)
                 response_text = response.text
-                print('Response text:', response_text)
+                #print('Response text:', response_text)
 
                 json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
                 if json_match:
@@ -123,18 +123,23 @@ class WhatsAppChatbot:
 
                     try:
                         recibo_json = json.loads(json_string)
-                        print('JSON generado:', recibo_json)
+                        
+                        # print('JSON generado:', recibo_json)
+                    
                     except json.JSONDecodeError as e:
                         logging.error(f"Error al decodificar JSON: {e}")
                         recibo_json = None
 
                     if recibo_json:
                         recibos.append(recibo_json)
-                        print('Recibo almacenado en recibos:', recibos)
+                        
+                        # print('Recibo almacenado en recibos:', recibos)
                         
                     response_text = response_text.replace(json_string, "").strip()
                 else:
+                    
                     print('No se encontró un JSON válido en la respuesta:', response_text)
+            
             except Exception as e:
                 logging.error(f"Error al procesar el mensaje: {e}")
                 response_text = "Lo siento, no puedo procesar tu solicitud en este momento."
@@ -148,7 +153,7 @@ class WhatsAppChatbot:
 
     def obtener_recibos(self):
         with self.lock:
-            print('obt_recibos: ', recibos)
+            # print('obt_recibos: ', recibos)
             return recibos
 
 
@@ -282,10 +287,10 @@ def catalogo_Message(number):
     )
     return data
 
-def administrar_chatbot(textu, number, messageId, name, session, chat_session):
+def administrar_chatbot(textu, number, messageId, name, chat_session,chatbot):
     textu = textu.lower()
     print(f"Mensaje del usuario {number}: {textu}")
-    WhatsAppChatbot.receive_message(textu, number, messageId, name, chat_session)
+    chatbot.receive_message(textu, number, messageId, name, chat_session)
 
     # Marca el mensaje como leído
     markRead = markRead_Message(messageId)

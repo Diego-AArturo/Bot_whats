@@ -13,7 +13,7 @@ app.config['SECRET_KEY'] = 'secret!'
 # Diccionario para manejar las sesiones de los usuarios
 users_sessions = {}
 
-chatbot = services.WhatsAppChatbot(chat_model=services.chat, send_function=services.enviar_Mensaje_whatsapp)
+chatbot = services.WhatsAppChatbot(send_function=services.enviar_Mensaje_whatsapp)
 
 @app.route('/pedidos', methods=['GET'])
 def pedidos():
@@ -45,9 +45,16 @@ def recibir_mensajes():
         # Crear nueva sesión si no existe
         if number not in users_sessions:
             users_sessions[number] = {
-                'session': services.create_new_session(number),
+                #'session': services.create_new_session(number),
                 'chat_session': services.start_new_chat_session()  # Aquí creamos una nueva sesión de chat
             }
+            # print(users_sessions[number]['chat_session'])
+            print(f"Texto: {text}")
+            print(f"Número: {number}")
+            print(f"MessageId: {messageId}")
+            print(f"Nombre: {name}")
+            # print(f"Chat_session: {users_sessions[number]['chat_session']}")
+            print(f"Chatbot: {chatbot}")
 
         # Procesa el mensaje usando el chatbot, pasando la sesión correspondiente del usuario
         chatbot_response = services.administrar_chatbot(
@@ -55,8 +62,9 @@ def recibir_mensajes():
             number, 
             messageId, 
             name, 
-            session=users_sessions[number]['session'],
-            chat_session=users_sessions[number]['chat_session']  # Pasamos la sesión de chat
+            #session=users_sessions[number]['session'],
+            chat_session=users_sessions[number]['chat_session'], # Pasamos la sesión de chat
+            chatbot=chatbot
         )
 
         return 'enviado'
@@ -65,5 +73,5 @@ def recibir_mensajes():
 
 if __name__ == '__main__':
     print('Escuchando en el puerto 5000...')
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', debug = True)
 
