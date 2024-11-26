@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import services
 from dotenv import load_dotenv
 import os
+import test_db
 
 load_dotenv()
 
@@ -70,6 +71,111 @@ def recibir_mensajes():
         return 'enviado'
     except Exception as e:
         return f'no enviado: {str(e)}'
+
+@app.route('/productos', methods=['POST'])
+def crear_producto():
+    data = request.json
+    required_fields = ['nombre', 'descripcion', 'precio', 'disponibilidad']
+    
+    # Validar que todos los campos necesarios estén en la solicitud
+    if all(field in data and data[field] is not None for field in required_fields):
+        # Llamar a la función insert_product de test_db.py
+        response = test_db.insert_product(data)
+        
+        # Comprobar si la inserción fue exitosa
+        if response.get("status") == "success":
+            return jsonify(response), 201
+        else:
+            return jsonify(response), 500  # Enviar el error si ocurrió un problema al insertar
+    else:
+        return jsonify({"message": "Por favor complete todos los campos requeridos", "status": "error"}), 400
+
+@app.route('/productos/<int:id_producto>', methods=['PUT']) #
+def actualizar_producto(id_producto):
+    data = request.json
+    required_fields = ['nombre', 'descripcion', 'precio', 'disponibilidad']
+    if all(field in data for field in required_fields):
+        response = test_db.update_product(id_producto, data)
+        if response.get("status") == "success":
+            return jsonify(response), 200
+        else:
+            return jsonify(response), 500
+    else:
+        return jsonify({"message": "Campos requeridos faltantes", "status": "error"}), 400
+
+@app.route('/productos/<int:id_producto>', methods=['DELETE']) #
+def eliminar_producto(nombre):
+    response = test_db.delete_product(nombre)
+    if response.get("status") == "success":
+        return jsonify(response), 200
+    else:
+        return jsonify(response), 500
+
+@app.route('/productos', methods=['GET']) #
+def listar_productos():
+    response = test_db.get_all_products()
+    return jsonify(response), 200
+
+# @app.route('/promociones', methods=['POST']) 
+# def crear_promos():
+#     data = request.json
+#     required_fields = ['nombre', 'productos_incluidos', 'precio_promocion', 'fecha_inicio', 'fecha_fin']
+    
+#     # Validar que todos los campos necesarios estén en la solicitud
+#     if all(field in data and data[field] is not None for field in required_fields):
+#         # Llamar a la función insert_product de test_db.py
+#         response = test_db.insert_promo(data)
+        
+#         # Comprobar si la inserción fue exitosa
+#         if response.get("status") == "success":
+#             return jsonify(response), 201
+#         else:
+#             return jsonify(response), 500  # Enviar el error si ocurrió un problema al insertar
+#     else:
+#         return jsonify({"message": "Por favor complete todos los campos requeridos", "status": "error"}), 400
+
+# @app.route('/promociones/<int:id_promocion>', methods=['PUT']) #
+# def actualizar_promo(id_promocion):
+#     data = request.json
+#     # Validar datos necesarios
+#     required_fields = ['nombre', 'productos_incluidos', 'precio_promocion', 'fecha_inicio', 'fecha_fin']
+#     if all(field in data and data[field] is not None for field in required_fields):
+#         response = test_db.update_promo(id_promocion, data)
+#         if response.get("status") == "success":
+#             return jsonify(response), 200
+#         else:
+#             return jsonify(response), 500
+#     else:
+#         return jsonify({"message": "Campos requeridos faltantes", "status": "error"}), 400
+
+# @app.route('/promociones/<int:id_promocion>', methods=['DELETE']) #
+# def eliminar_promo(id_promocion):
+#     response = test_db.delete_promo(id_promocion)
+#     if response.get("status") == "success":
+#         return jsonify(response), 200
+#     else:
+#         return jsonify(response), 500
+
+@app.route('/pedidos/<int:id_pedido>', methods=['PATCH']) #
+def actualizar_estado_pedido(id_pedido):
+    data = request.json
+    if 'estado' in data:
+        response = test_db.update_order_status(id_pedido, data['estado'])
+        if response.get("status") == "success":
+            return jsonify(response), 200
+        else:
+            return jsonify(response), 500
+    else:
+        return jsonify({"message": "Falta el campo 'estado'", "status": "error"}), 400
+
+@app.route('/pedidos/<int:id_pedido>', methods=['DELETE']) #
+def eliminar_pedido(id_pedido):
+    response = test_db.delete_order(id_pedido)
+    if response.get("status") == "success":
+        return jsonify(response), 200
+    else:
+        return jsonify(response), 500
+
 
 if __name__ == '__main__':
     print('Escuchando en el puerto 5000...')
